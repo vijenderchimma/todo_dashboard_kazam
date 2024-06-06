@@ -1,49 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
-import TodoItem from './TodoItem';
 import { GiNotebook } from "react-icons/gi";
+import TodoItem from './TodoItem';
 
-const LOCAL_STORAGE_KEY = 'tasks';
-const LIMIT = 50;
+const localStorageKey = 'tasks'
+const limit = 50;
 
 function App() {
   const [task, setTask] = useState('');
-  const [tasks, setTasks] = useState([]);
+  const [todos,setTodos] = useState([])
 
-  useEffect(() => {
-    const storedTasks = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY));
-    if (storedTasks) {
-      setTasks(storedTasks);
-    }
-    fetchTasks();
-  }, []);
 
-  const fetchTasks = async () => {
+  useEffect(()=>{
+    fetchTasks()
+  },[])
+
+  const fetchTasks =async () => {
     try {
-      const response = await axios.get('http://localhost:4000/fetchAllTasks');
-      setTasks(prevTasks => [...prevTasks, ...response.data]);
+      const response = await axios.get('http://localhost:4000/fetchalltasks')
+      setTodos(response.data)
+      console.log(response.data)
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      console.log(error)
     }
-  };
+  }
+
+
 
   const addTask = async () => {
-    const newTask = { id: uuidv4(), text: task };
-    const newTasks = [...tasks, newTask];
-    if (newTasks.length > LIMIT) {
-      try {
-        await axios.post('http://localhost:4000/add', { tasks: newTasks });
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-        setTasks([]); // Clear tasks after sending to the backend
-      } catch (error) {
-        console.error('Error adding task:', error);
+
+    try {
+      const response = await axios.post('http://localhost:4000/add', { task });
+      if (response.status === 200) {
+        alert("Added Successfully");
+        setTask(''); // Clear the input field after adding the task
+        window.location.reload()
+      } else {
+        alert("Failed to add task");
       }
-    } else {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newTasks));
-      setTasks(newTasks); // Update state with new tasks
+    } catch (error) {
+      console.error('Error adding task:', error);
+      alert("Error adding task");
     }
-    setTask(''); // Clear the input field after adding the task
   };
 
   return (
@@ -61,12 +59,12 @@ function App() {
         </div>
         <div className="task-list">
           <h3>Notes</h3>
-          {tasks && tasks.map((todo) => (
-            <TodoItem todo={todo} key={todo.id} />
+          {todos && todos.map(item=>(
+            <TodoItem todo = {item} key = {item._id}/>
           ))}
         </div>
       </div>
-      </div>
+    </div>
   );
 }
 
