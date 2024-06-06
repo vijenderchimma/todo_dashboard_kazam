@@ -2,24 +2,40 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { GiNotebook } from "react-icons/gi";
 import TodoItem from './TodoItem';
+import API_URL from './ApiPath';
 
 const localStorageKey = 'tasks'
 const limit = 50;
 
-function App() {
+function NoteApp() {
   const [task, setTask] = useState('');
-  const [todos,setTodos] = useState([])
+  const [todos, setTodos] = useState([])
+  const [fetchedtasks, setFecthedtasks] = useState([])
 
 
-  useEffect(()=>{
-    fetchTasks()
-  },[])
+  useEffect(() => {
+    const storedData = JSON.parse(localStorage.getItem(localStorageKey))
+    if (storedData) {
+      setTodos(storedData)
+    } else {
+      fetchTasks()
+    }
+  }, [])
 
-  const fetchTasks =async () => {
+  const fetchTasks = async () => {
     try {
-      const response = await axios.get('http://localhost:4000/fetchalltasks')
-      setTodos(response.data)
+      const response = await axios.get(`${API_URL}/fetchalltasks`)
+      setFecthedtasks(response.data)
       console.log(response.data)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+  const sendTobackend = async (text) => {
+    try {
+      const response = await axios.post(`${API_URL}/add`, text)
+      console.log(response)
+      return response
     } catch (error) {
       console.log(error)
     }
@@ -29,20 +45,33 @@ function App() {
 
   const addTask = async () => {
 
-    try {
-      const response = await axios.post('http://localhost:4000/add', { task });
-      if (response.status === 200) {
-        alert("Added Successfully");
-        setTask(''); // Clear the input field after adding the task
-        window.location.reload()
-      } else {
-        alert("Failed to add task");
+    const updatedTodos = [...todos, task];
+
+
+    if (updatedTodos.length > limit) {
+      localStorage.removeItem(localStorageKey);
+
+      try {
+
+        for (let text of updatedTodos) {
+          console.log(text)
+          const taskOutput = await sendTobackend({ text })
+          if(taskOutput.status === 200){
+            alert("Todo Added Successfully")
+          }
+          console.log(taskOutput)
+        }
+
+      } catch (error) {
+        console.error('Error adding tasks:', error);
+        alert('Error adding tasks');
       }
-    } catch (error) {
-      console.error('Error adding task:', error);
-      alert("Error adding task");
+    } else {
+      localStorage.setItem(localStorageKey, JSON.stringify(updatedTodos));
+      setTodos(updatedTodos);
     }
   };
+
 
   return (
     <div className='main--container'>
@@ -59,13 +88,20 @@ function App() {
         </div>
         <div className="task-list">
           <h3>Notes</h3>
-          {todos && todos.map(item=>(
-            <TodoItem todo = {item} key = {item._id}/>
+          {todos && todos.map(item => (
+            <>
+              <p>{item}</p>
+              <hr />
+            </>
           ))}
+          {fetchedtasks && fetchedtasks.map(item => (
+            <TodoItem todo={item} key={item._id} />
+          ))}
+
         </div>
       </div>
     </div>
   );
 }
 
-export default App;
+export default NoteApp;
